@@ -4,17 +4,24 @@ module Main where
 
 import Text.HTML.Scalpel
 import Data.Text.IO (readFile)
-import Data.Text hiding (concat)
+import Data.Text (Text)
+import qualified Data.Text as T
 import Prelude hiding (readFile, unwords)
 import Control.Applicative (many)
 
-data BusNum = BusNum Text
+data BusInfo = BusInfo
+  { num   :: Text
+  , route :: Text
+  , from  :: Text
+  , days  :: Text
+  , times :: [Text]
+  }
   deriving Show
 
 (/.) :: Selector -> Selector -> Selector
 s1 /. s2 = s1 // s2 `atDepth` 1
 
-table :: IO (Maybe [Text])
+table :: IO (Maybe [BusInfo])
 table = scrapeSource nums
   where
     scrapeSource :: Scraper Text a -> IO (Maybe a)
@@ -24,7 +31,7 @@ table = scrapeSource nums
       return $ scrapeStringLike page scraper
 
 
-    nums :: Scraper Text [Text]
+    nums :: Scraper Text [BusInfo]
     nums = chroots  "tbody" $ inSerial $ do
       (num, route) <- seekNext $ chroot  "tr" $ inSerial $ do
         num   <- seekNext . text $ "td" // "p"
@@ -39,7 +46,9 @@ table = scrapeSource nums
         times <- seekNext . texts $ "tr" /. "td"
         return times
 
-      return $ unwords $ [num, route, from, days] ++ concat timess
+      let times = filter (not . T.null) . concat $ timess
+          days' = T.unwords . T.words $ days
+      return $ BusInfo num route from days' times
 
 
 main :: IO ()
