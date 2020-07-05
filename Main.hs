@@ -64,7 +64,7 @@ table routeId stationId = scrapeSource nums
           route' = clean route
           from'  = clean from
           days'  = clean days
-          times  = map clean . filter (not . T.null) . concat $ timess
+          times  = filter (not . T.null) . map clean . concat $ timess
       return $ BusInfo num' route' from' days' times
 
 type RouteNum = Text
@@ -87,5 +87,7 @@ fromSilakrogsIds =
 
 main :: IO ()
 main = do
+  table 3 8 >>= print
+  putStrLn ""
   buses <- mapM (uncurry table) $ fromRigaIds ++ fromSilakrogsIds
   print $ sortBusses . concat <$> buses
