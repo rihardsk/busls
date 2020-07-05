@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+-- {-# LANGUAGE DeriveGeneric #-}
 
 module Main where
 
@@ -10,6 +11,8 @@ import Prelude hiding (readFile, unwords)
 import Control.Applicative (many)
 import Text.Printf (printf)
 import Control.Monad
+import Data.List (sortOn)
+-- import Options.Generic
 
 data BusInfo = BusInfo
   { num   :: Text
@@ -54,19 +57,28 @@ table routeId stationId = scrapeSource nums
           route' = clean route
           from'  = clean from
           days'  = clean days
-          times  = filter (not . T.null) . concat $ timess
+          times  = map clean . filter (not . T.null) . concat $ timess
       return $ BusInfo num' route' from' days' times
 
-ids =
+type RouteNum = Text
+type Time = Text
+
+sortBusses :: [BusInfo] -> [(RouteNum, Time)]
+sortBusses = sortOn snd . concat . map toTimes
+  where toTimes b = map (\time -> (num b, time)) $ times b
+
+fromRigaIds =
   [ (2, 4)
-  , (2, 5)
   , (3, 8)
-  , (3, 9)
   , (4, 13)
+  ]
+fromSilakrogsIds =
+  [ (2, 5)
+  , (3, 9)
   , (4, 14)
   ]
 
 main :: IO ()
-main = mapM_ (print <=< uncurry table) ids
---   (routeId, stationId) <- ids
---   table routeId stationId >>= print
+main = do
+  buses <- mapM (uncurry table) $ fromRigaIds ++ fromSilakrogsIds
+  print $ sortBusses . concat <$> buses
