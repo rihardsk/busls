@@ -22,5 +22,6 @@ executable busls
   -- other-extensions:
   build-depends:       base >=4.13 && <5
                      , scalpel
+                     , text
   -- hs-source-dirs:
   default-language:    Haskell2010

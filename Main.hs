@@ -3,17 +3,27 @@
 module Main where
 
 import Text.HTML.Scalpel
+import Data.Text.IO (readFile)
+import Data.Text
+import Prelude hiding (readFile, unwords)
 
-data BusNum = BusNum String
+data BusNum = BusNum Text
   deriving Show
 
 (/.) :: Selector -> Selector -> Selector
 s1 /. s2 = s1 // s2 `atDepth` 1
 
-table :: IO (Maybe [String])
-table = scrapeURL "http://galssbuss.lv/pages/info_detail.php?l=lv&id_section=3&id_route=2&id_station=4" nums
+table :: IO (Maybe [Text])
+table = scrapeSource nums
   where
-    nums :: Scraper String [String]
+    scrapeSource :: Scraper Text a -> IO (Maybe a)
+    -- scrapeSource = scrapeURL "http://galssbuss.lv/pages/info_detail.php?l=lv&id_section=3&id_route=2&id_station=4"
+    scrapeSource scraper = do
+      page <- readFile "page.html"
+      return $ scrapeStringLike page scraper
+
+
+    nums :: Scraper Text [Text]
     nums = chroots  "tbody" $ inSerial $ do
       (num, route) <- seekNext $ chroot  "tr" $ inSerial $ do
         num   <- seekNext . text $ "td" // "p"
