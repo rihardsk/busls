@@ -4,8 +4,9 @@ module Main where
 
 import Text.HTML.Scalpel
 import Data.Text.IO (readFile)
-import Data.Text
+import Data.Text hiding (concat)
 import Prelude hiding (readFile, unwords)
+import Control.Applicative (many)
 
 data BusNum = BusNum Text
   deriving Show
@@ -34,8 +35,11 @@ table = scrapeSource nums
         seekNext $ matches "td"
         days <- seekNext . text $ "td" // "p"
         return (from, days)
+      timess <- untilNext (matches $ "tr" // "td" // "p" ) $ many $ do
+        times <- seekNext . texts $ "tr" /. "td"
+        return times
 
-      return $ unwords [num, route, from, days]
+      return $ unwords $ [num, route, from, days] ++ concat timess
 
 
 main :: IO ()
