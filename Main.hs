@@ -12,7 +12,7 @@ import Control.Applicative (many)
 import Text.Printf (printf)
 import Control.Monad
 import Control.Applicative ((<|>))
-import Data.List (sortOn)
+import Data.List (sortOn, foldl')
 -- import Options.Generic
 
 data BusInfo = BusInfo
@@ -85,9 +85,19 @@ fromSilakrogsIds =
   , (4, 14)
   ]
 
+pprint :: [(RouteNum, Time)] -> Text
+pprint = foldl' toLine ""
+  where
+    toLine :: Text -> (RouteNum, Time) -> Text
+    toLine "" (r, t) = T.pack $ printf "%s\t%s" r t
+    toLine s b = s <> "\n" <> toLine "" b
+
 main :: IO ()
 main = do
-  table 3 8 >>= print
-  putStrLn ""
-  buses <- mapM (uncurry table) $ fromRigaIds ++ fromSilakrogsIds
-  print $ sortBusses . concat <$> buses
+  rbuses <- mconcat <$> mapM (uncurry table) fromRigaIds
+  sbuses <- mconcat <$> mapM (uncurry table) fromSilakrogsIds
+  mbyPrint rbuses
+  where
+    mbyPrint buses = case buses of
+      Nothing -> putStrLn "Could not parse; exiting"
+      Just bs -> putStrLn $ T.unpack . pprint . sortBusses $ bs
