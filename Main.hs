@@ -11,6 +11,7 @@ import Prelude hiding (readFile, unwords)
 import Control.Applicative (many)
 import Text.Printf (printf)
 import Control.Monad
+import Control.Applicative ((<|>))
 import Data.List (sortOn)
 -- import Options.Generic
 
@@ -38,6 +39,12 @@ table routeId stationId = scrapeSource nums
     clean :: Text -> Text
     clean = T.unwords . T.words
 
+    isTextual :: Scraper Text ()
+    isTextual = do
+      content <- text $ "tr" // "td"
+      let n = length . T.words $ content
+      guard (n > 1)
+
     nums :: Scraper Text [BusInfo]
     nums = chroots  "tbody" $ inSerial $ do
       (num, route) <- seekNext $ chroot  "tr" $ inSerial $ do
@@ -49,7 +56,7 @@ table routeId stationId = scrapeSource nums
         seekNext $ matches "td"
         days <- seekNext . text $ "td"
         return (from, days)
-      timess <- untilNext (matches $ "tr" // "td" // "p" ) $ many $ do
+      timess <- untilNext ((matches $ "tr" // "td" // "p" ) <|> isTextual) $ many $ do
         times <- seekNext . texts $ "tr" /. "td"
         return times
 
