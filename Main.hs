@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 -- {-# LANGUAGE DeriveGeneric #-}
 
 module Main where
@@ -14,6 +15,9 @@ import Control.Monad
 import Control.Applicative ((<|>))
 import Data.List (sortOn, foldl')
 -- import Options.Generic
+import Data.List.Extra (groupSort)
+import Data.Maybe (fromJust)
+
 
 data BusInfo = BusInfo
   { num   :: Text
@@ -68,6 +72,9 @@ table routeId stationId = scrapeSource nums
       return $ BusInfo num' route' from' days' times
 
 type RouteNum = Text
+type Route = Text
+type Station = Text
+type Days = Text
 type Time = Text
 
 sortBusses :: [BusInfo] -> [(RouteNum, Time)]
@@ -92,12 +99,14 @@ pprint = foldl' toLine ""
     toLine "" (r, t) = T.pack $ printf "%s\t%s" r t
     toLine s b = s <> "\n" <> toLine "" b
 
+groupBuses :: [BusInfo] -> [(Days, [BusInfo])]
+groupBuses = groupSort . map (\b -> (days b, b))
+
 main :: IO ()
 main = do
-  rbuses <- mconcat <$> mapM (uncurry table) fromRigaIds
-  sbuses <- mconcat <$> mapM (uncurry table) fromSilakrogsIds
-  mbyPrint rbuses
+  rbuses :: Maybe [BusInfo] <- mconcat <$> mapM (uncurry table) fromRigaIds
+  sbuses :: Maybe [BusInfo] <- mconcat <$> mapM (uncurry table) fromSilakrogsIds
+  fromJust $ printGroups <$> rbuses
   where
-    mbyPrint buses = case buses of
-      Nothing -> putStrLn "Could not parse; exiting"
-      Just bs -> putStrLn $ T.unpack . pprint . sortBusses $ bs
+    printBuses bs = putStrLn $ T.unpack . pprint . sortBusses $ bs
+    printGroups = mapM_ (\(d, bs) -> (putStrLn . T.unpack) d >> printBuses bs) . groupBuses
