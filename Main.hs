@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
 -- {-# LANGUAGE DeriveGeneric #-}
 
 module Main where
@@ -17,14 +18,16 @@ import Data.List (sortOn, foldl')
 -- import Options.Generic
 import Data.List.Extra (groupSort)
 import Data.Maybe (fromJust)
+import Text.Regex.TDFA as R
 
 
+-- | Holds info on a single timetable
 data BusInfo = BusInfo
-  { num   :: Text
-  , route :: Text
-  , from  :: Text
-  , days  :: Text
-  , times :: [Text]
+  { num   :: Text -- ^ e.g., 6829
+  , route :: Text -- ^ e.g., SILAKROGS - ROPAŽI
+  , from  :: Text -- ^ e.g., no Silakroga
+  , days  :: Text -- ^ e.g., Darba dienās
+  , times :: [Text] -- ^ e.g., ["06.29", "09.39"]
   }
   deriving Show
 
@@ -67,9 +70,19 @@ table routeId stationId = scrapeSource nums
       let num'   = clean num
           route' = clean route
           from'  = clean from
-          days'  = clean days
+          days'  = normalize $ clean days
           times  = filter (not . T.null) . map clean . concat $ timess
       return $ BusInfo num' route' from' days' times
+
+normalize :: Text -> Text
+normalize days
+  | r `R.match` days = "Sestdienās, svētdienās un svētku dienās"
+  -- -- | days =~ ("asdf" :: Text) = "Sestdienās, svētdienās un svētku dienās"
+  where
+        pat = "sestdien.*svētdien.*svētku" :: Text
+        copt = defaultCompOpt{caseSensitive = False}
+        r = makeRegexOpts copt defaultExecOpt pat
+normalize days = days
 
 type RouteNum = Text
 type Route = Text
@@ -106,7 +119,10 @@ main :: IO ()
 main = do
   rbuses :: Maybe [BusInfo] <- mconcat <$> mapM (uncurry table) fromRigaIds
   sbuses :: Maybe [BusInfo] <- mconcat <$> mapM (uncurry table) fromSilakrogsIds
+  putStrLn "### No Rīgas"
   fromJust $ printGroups <$> rbuses
+  putStrLn "\n### No Silakroga"
+  fromJust $ printGroups <$> sbuses
   where
     printBuses bs = putStrLn $ T.unpack . pprint . sortBusses $ bs
     printGroups = mapM_ (\(d, bs) -> (putStrLn . T.unpack) d >> printBuses bs) . groupBuses
