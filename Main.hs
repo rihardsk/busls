@@ -9,6 +9,7 @@ import Text.HTML.Scalpel
 import Data.Text.IO (readFile)
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as Encoding
 import Prelude hiding (readFile, unwords)
 import Control.Applicative (many)
 import Text.Printf (printf)
@@ -19,6 +20,13 @@ import Data.List (sortOn, foldl')
 import Data.List.Extra (groupSort)
 import Data.Maybe (fromJust)
 import Text.Regex.TDFA as R
+
+-- import qualified Text.HTML.TagSoup as TagSoup
+import qualified Text.StringLike as TagSoup
+import qualified Network.HTTP.Client as HTTP
+import qualified Data.ByteString.Lazy as LBS
+-- import Data.ByteString.Lazy.Builder (toLazyByteString, word8Hex)
+import qualified Data.ByteString as BS
 
 
 -- | Holds info on a single timetable
@@ -38,10 +46,19 @@ table :: Int -> Int -> IO (Maybe [BusInfo])
 table routeId stationId = scrapeSource nums
   where
     scrapeSource :: Scraper Text a -> IO (Maybe a)
-    scrapeSource = scrapeURL $ printf "http://galssbuss.lv/pages/info_detail.php?l=lv&id_section=3&id_route=%i&id_station=%i" routeId stationId
+    scrapeSource = scrapeURLWithConfig scrapeConfig $ printf "http://galssbuss.lv/pages/info_detail.php?l=lv&id_section=3&id_route=%i&id_station=%i" routeId stationId
     -- scrapeSource scraper = do
     --   page <- readFile "page.html"
     --   return $ scrapeStringLike page scraper
+
+    scrapeConfig = Config customUtf8Decoder Nothing
+    customUtf8Decoder ::  TagSoup.StringLike str => Decoder str
+    customUtf8Decoder = TagSoup.castString . Encoding.decodeUtf8 . filterBS wrong . LBS.toStrict . HTTP.responseBody
+
+    wrong = "\xe4\xeb\xff" :: BS.ByteString
+    filterBS :: BS.ByteString -> BS.ByteString -> BS.ByteString
+    filterBS substr bs = h <> if BS.null t then BS.empty else filterBS substr (BS.drop (BS.length substr) t)
+      where (h, t) = BS.breakSubstring substr bs
 
     clean :: Text -> Text
     clean = T.unwords . T.words

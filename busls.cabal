@@ -25,5 +25,8 @@ executable busls
                      , text
                      , extra
                      , regex-tdfa
+                     , tagsoup
+                     , bytestring
+                     , http-client
   -- hs-source-dirs:
   default-language:    Haskell2010
