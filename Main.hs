@@ -132,6 +132,15 @@ pprint = foldl' toLine ""
 groupBuses :: [BusInfo] -> [(Days, [BusInfo])]
 groupBuses = groupSort . map (\b -> (days b, b))
 
+modifyDays :: [BusInfo] -> [BusInfo]
+modifyDays = concatMap $ \b ->
+  if (T.toLower . days) b == "katru dienu"
+  then [b{days = "Darba dienās"}, b{days = "Sestdienās, svētdienās un svētku dienās"}]
+  else [b]
+
+filterOnlyRiga :: [BusInfo] -> [BusInfo]
+filterOnlyRiga = filter $ T.isInfixOf "rīga" . T.toLower . route
+
 main :: IO ()
 main = do
   rbuses :: Maybe [BusInfo] <- mconcat <$> mapM (uncurry table) fromRigaIds
@@ -142,4 +151,4 @@ main = do
   fromJust $ printGroups <$> sbuses
   where
     printBuses bs = putStrLn $ T.unpack . pprint . sortBusses $ bs
-    printGroups = mapM_ (\(d, bs) -> (putStrLn . T.unpack) d >> printBuses bs) . groupBuses
+    printGroups = mapM_ (\(d, bs) -> (putStrLn . T.unpack) d >> printBuses bs) . groupBuses . modifyDays . filterOnlyRiga
