@@ -126,7 +126,7 @@ pprint :: [(RouteNum, Time)] -> Text
 pprint = foldl' toLine ""
   where
     toLine :: Text -> (RouteNum, Time) -> Text
-    toLine "" (r, t) = T.pack $ printf "%s\t%s" r t
+    toLine "" (r, t) = T.pack $ printf "%-8s\t%s" t r
     toLine s b = s <> "\n" <> toLine "" b
 
 groupBuses :: [BusInfo] -> [(Days, [BusInfo])]
